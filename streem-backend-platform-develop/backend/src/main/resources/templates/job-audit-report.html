@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <title>Job Audit Report – Leucine</title>
+
+  <style>
+    /* ──────────────────────────────────────────────────────────
+       0) PAGE / RESET
+    ────────────────────────────────────────────────────────── */
+    @page {
+      size: A4 portrait;
+      margin-top: 60px;
+      margin-bottom: 38px;
+      margin-left: 0;
+      margin-right: 0;
+      @top-center {
+        content: element(pageHeader);
+      }
+      @bottom-center {
+        content: element(pageFooter);
+      }
+    }
+
+    html, body {
+      margin: 0;
+      padding: 0;
+      font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+      font-size: 11pt;
+      color: #000;
+    }
+
+    p, h3, h4 {
+      margin: 0;
+    }
+
+    ul { 
+      list-style: none; 
+      margin: 0; 
+      padding: 0; 
+    }
+
+    /* ──────────────────────────────────────────────────────────
+       1) HEADER & FOOTER
+    ────────────────────────────────────────────────────────── */
+    .header {
+      position: running(pageHeader);
+      background: #eeeeee;
+      padding: 10px 20px;
+    }
+
+    .header img {
+      height: 8mm;
+    }
+
+    .footer {
+      position: running(pageFooter);
+      background: #eeeeee;
+      font-size: 9pt;
+      padding: 8px 20px;
+    }
+
+    .footer-table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    .footer-table td {
+      vertical-align: middle;
+    }
+
+    .page-counter::after {
+      content: counter(page) " / " counter(pages);
+      display: inline-block;
+      background: #bababa;
+      border-radius: 4px;
+      padding: 2px 8px;
+      font-weight: bold;
+      white-space: nowrap;
+    }
+
+    /* ──────────────────────────────────────────────────────────
+       2) CONTENT WRAPPER
+    ────────────────────────────────────────────────────────── */
+    .content {
+      margin: 0.5cm;
+    }
+
+    .page-break {
+      page-break-before: always;
+      break-before: page;
+    }
+
+    /* ============== SECTION TITLE ============== */
+    .section-title {
+      display: inline-block;
+      background: #000;
+      color: #fff;
+      padding: 1.2mm 4mm;
+      margin: 0 0 0.5mm 0; /* sit pill just above slab */
+      border-radius: 8px 8px 0 0; /* only top corners rounded */
+      border-bottom: 0.5pt solid #000;
+    }
+
+    /* ============== DETAIL PANEL ============== */
+    .detail-panel {
+      background: #f2f2f2;
+      padding: 4mm;
+      margin-bottom: 6mm;
+    }
+
+    .detail-panel table.detail-table {
+      width: 100%;
+      border-collapse: separate;
+      border-spacing: 0 2mm;
+      margin-bottom: 12px;
+    }
+
+    .detail-panel table.detail-table th,
+    .detail-panel table.detail-table td {
+      vertical-align: top;
+    }
+
+    .detail-panel table.detail-table th {
+      width: 35%;
+      font-weight: 600;
+      border: none;
+      color: #000;
+      text-align: left;
+    }
+
+    .detail-panel table.detail-table td {
+      box-sizing: border-box;
+      border: 1pt solid #000;
+      background: none;
+    }
+
+    /* ============== AUDIT TIMELINE ============== */
+    .date-section {
+      font-weight: bold;
+      font-size: 11pt;
+      margin: 22px 0 6px;
+    }
+
+    ul.activities {
+      list-style: none;
+      margin: 0 0 14px 22px;
+      padding: 0 0 0 0;
+    }
+
+    ul.activities:after {
+      content: "";
+      display: block;
+      border-bottom: 1px solid #bababa;
+      margin-top: 12px;
+    }
+
+    ul.activities li {
+      position: relative;
+      border-left: 1px dashed #bababa;
+      padding: 2px 0 2px 18px;
+      font-size: 11pt;
+    }
+
+    ul.activities .circle {
+      display: inline-block;
+      position: absolute;
+      top: 0.45em;
+      left: -5px;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #bababa;
+    }
+
+    ul.activities .time {
+      display: inline-block;
+      width: 65px;
+      margin-right: 6px;
+    }
+    
+    /* Simple spacing for checkbox options */
+    .checkbox-option {
+      margin-bottom: 3px;
+    }
+    
+    /* Task number styling in instructions */
+    .task-number {
+      font-size: 0.9em;
+      color: #666;
+      margin-right: 5px;
+    }
+    
+  </style>
+</head>
+
+<body>
+<!-- Header -->
+<div class="header">
+  <table style="width:100%;">
+    <tr>
+      <td style="text-align:left;">
+        <img src="{{CLIENT_LOGO}}" alt="Client Logo">
+      </td>
+      <td style="text-align:right;">
+        <img src="{{LEUCINE_LOGO}}" alt="Leucine Logo">
+      </td>
+    </tr>
+  </table>
+</div>
+
+<!-- Footer (text left, page number right inside a box) -->
+<div class="footer">
+  <table class="footer-table">
+    <tr>
+      <td style="text-align:left;">
+        Downloaded on {{GENERATED_AT}}. By {{USER}} ID: {{USER_ID}} for Facility: {{FACILITY}} using {{APP_LABEL}} - Leucine App
+      </td>
+      <td style="text-align:right;">
+        <span class="page-counter"></span>
+      </td>
+    </tr>
+  </table>
+</div>
+
+<div class="content">
+  {{content}}
+</div>
+</body>
+</html>

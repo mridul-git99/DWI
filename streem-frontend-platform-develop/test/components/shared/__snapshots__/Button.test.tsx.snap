@@ -1,0 +1,288 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`Button component handles click event 1`] = `
+.c0 {
+  position: relative;
+  -webkit-align-items: center;
+  -webkit-box-align: center;
+  -ms-flex-align: center;
+  align-items: center;
+  border: 1px solid transparent;
+  cursor: pointer;
+  display: -webkit-box;
+  display: -webkit-flex;
+  display: -ms-flexbox;
+  display: flex;
+  font-size: 14px;
+  -webkit-box-pack: center;
+  -webkit-justify-content: center;
+  -ms-flex-pack: center;
+  justify-content: center;
+  margin-right: 24px;
+  outline: none;
+  padding-block: 12px;
+  padding-inline: 24px;
+  background-color: #1d84ff;
+  color: #ffffff;
+}
+
+.c0:last-of-type {
+  margin-right: 0;
+}
+
+.c0:disabled {
+  cursor: not-allowed;
+}
+
+.c0 > .icon {
+  color: #ffffff;
+}
+
+.c0:hover {
+  background-color: #005dcc;
+}
+
+.c0:active {
+  background-color: #00387a;
+}
+
+<button
+  class="c0"
+  type="button"
+>
+  Click Me
+</button>
+`;
+
+exports[`Button component renders button with default props 1`] = `
+.c0 {
+  position: relative;
+  -webkit-align-items: center;
+  -webkit-box-align: center;
+  -ms-flex-align: center;
+  align-items: center;
+  border: 1px solid transparent;
+  cursor: pointer;
+  display: -webkit-box;
+  display: -webkit-flex;
+  display: -ms-flexbox;
+  display: flex;
+  font-size: 14px;
+  -webkit-box-pack: center;
+  -webkit-justify-content: center;
+  -ms-flex-pack: center;
+  justify-content: center;
+  margin-right: 24px;
+  outline: none;
+  padding-block: 12px;
+  padding-inline: 24px;
+  background-color: #1d84ff;
+  color: #ffffff;
+}
+
+.c0:last-of-type {
+  margin-right: 0;
+}
+
+.c0:disabled {
+  cursor: not-allowed;
+}
+
+.c0 > .icon {
+  color: #ffffff;
+}
+
+.c0:hover {
+  background-color: #005dcc;
+}
+
+.c0:active {
+  background-color: #00387a;
+}
+
+<button
+  class="c0"
+  type="button"
+>
+  Default Button
+</button>
+`;
+
+exports[`Button component renders button with specified color and variant 1`] = `
+.c0 {
+  position: relative;
+  -webkit-align-items: center;
+  -webkit-box-align: center;
+  -ms-flex-align: center;
+  align-items: center;
+  border: 1px solid transparent;
+  cursor: pointer;
+  display: -webkit-box;
+  display: -webkit-flex;
+  display: -ms-flexbox;
+  display: flex;
+  font-size: 14px;
+  -webkit-box-pack: center;
+  -webkit-justify-content: center;
+  -ms-flex-pack: center;
+  justify-content: center;
+  margin-right: 24px;
+  outline: none;
+  padding-block: 12px;
+  padding-inline: 24px;
+  background-color: #ffffff;
+  border-color: #5aa700;
+  color: #5aa700;
+}
+
+.c0:last-of-type {
+  margin-right: 0;
+}
+
+.c0:disabled {
+  cursor: not-allowed;
+}
+
+.c0 > .icon {
+  color: inherit;
+}
+
+.c0:hover {
+  background-color: #5aa700;
+  color: #ffffff;
+}
+
+.c0:hover > .icon {
+  color: inherit;
+}
+
+.c0:active {
+  background-color: #427a00;
+}
+
+<button
+  class="c0"
+  color="green"
+  type="button"
+>
+  Secondary Green Button
+</button>
+`;
+
+exports[`Button component renders disabled secondary button 1`] = `
+.c0 {
+  position: relative;
+  -webkit-align-items: center;
+  -webkit-box-align: center;
+  -ms-flex-align: center;
+  align-items: center;
+  border: 1px solid transparent;
+  cursor: pointer;
+  display: -webkit-box;
+  display: -webkit-flex;
+  display: -ms-flexbox;
+  display: flex;
+  font-size: 14px;
+  -webkit-box-pack: center;
+  -webkit-justify-content: center;
+  -ms-flex-pack: center;
+  justify-content: center;
+  margin-right: 24px;
+  outline: none;
+  padding-block: 12px;
+  padding-inline: 24px;
+  background-color: #ffffff;
+  border-color: #1d84ff;
+  color: #1d84ff;
+  border-color: #bbbbbb;
+  color: #bbbbbb;
+  background-color: #fff;
+}
+
+.c0:last-of-type {
+  margin-right: 0;
+}
+
+.c0:disabled {
+  cursor: not-allowed;
+}
+
+.c0 > .icon {
+  color: inherit;
+}
+
+.c0:hover {
+  background-color: #005dcc;
+  color: #ffffff;
+}
+
+.c0:hover > .icon {
+  color: inherit;
+}
+
+.c0:active {
+  background-color: #00387a;
+}
+
+.c0:hover {
+  background-color: #fff;
+  color: #bbbbbb;
+}
+
+<button
+  class="c0"
+  disabled=""
+  type="button"
+>
+  Disabled Button
+</button>
+`;
+
+exports[`Button component renders text-only button with transparent background 1`] = `
+.c0 {
+  position: relative;
+  -webkit-align-items: center;
+  -webkit-box-align: center;
+  -ms-flex-align: center;
+  align-items: center;
+  border: 1px solid transparent;
+  cursor: pointer;
+  display: -webkit-box;
+  display: -webkit-flex;
+  display: -ms-flexbox;
+  display: flex;
+  font-size: 14px;
+  -webkit-box-pack: center;
+  -webkit-justify-content: center;
+  -ms-flex-pack: center;
+  justify-content: center;
+  margin-right: 24px;
+  outline: none;
+  padding-block: 12px;
+  padding-inline: 24px;
+  background-color: transparent;
+  color: #ff6b6b;
+  padding: 4px 8px;
+}
+
+.c0:last-of-type {
+  margin-right: 0;
+}
+
+.c0:disabled {
+  cursor: not-allowed;
+}
+
+.c0:hover,
+.c0:active {
+  background-color: #fafafa;
+}
+
+<button
+  class="c0"
+  color="red"
+  type="button"
+>
+  Text-only Button
+</button>
+`;

@@ -1,0 +1,42 @@
+{
+  "a.dev.platform.leucinetech.com": {
+    "path": "/home/ubuntu/dev/a",
+    "username": "ubuntu"
+  },
+  "b.dev.platform.leucinetech.com": {
+    "path": "/home/ubuntu/dev/b",
+    "username": "ubuntu"
+  },
+  "c.dev.platform.leucinetech.com": {
+    "path": "/home/ubuntu/dev/c",
+    "username": "ubuntu"
+  },
+  "d.dev.platform.leucinetech.com": {
+    "path": "/home/ubuntu/dev/d",
+    "username": "ubuntu"
+  },
+  "dev.platform.leucinetech.com": {
+    "path": "/home/ubuntu/dev/main",
+    "username": "ubuntu"
+  },
+  "a.qa.platform.leucinetech.com": {
+    "path": "/home/ubuntu/qa/a",
+    "username": "ubuntu"
+  },
+  "qa.platform.leucinetech.com": {
+    "path": "/home/ubuntu/qa/main",
+    "username": "ubuntu"
+  },
+  "b.qa.platform.leucinetech.com": {
+    "path": "/home/ubuntu/qa/b",
+    "username": "ubuntu"
+  },
+  "c.qa.platform.leucinetech.com": {
+    "path": "/home/ubuntu/qa/c",
+    "username": "ubuntu"
+  },
+  "somerset.qa.platform.leucinetech.com": {
+    "path": "/home/ubuntu/qa/somerset",
+    "username": "ubuntu"
+  }
+}

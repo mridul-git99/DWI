@@ -1,0 +1,98 @@
+# grafana/provisioning/datasources/datasources.yaml
+apiVersion: 1
+
+datasources:
+  # Prometheus for metrics
+  - name: Prometheus
+    type: prometheus
+    access: proxy
+    url: http://prometheus:9090
+    isDefault: true
+    jsonData:
+      httpMethod: POST
+      exemplarTraceIdDestinations:
+        - name: trace_id
+          datasourceUid: tempo
+          urlDisplayLabel: 'View Trace'
+      prometheusType: Prometheus
+      prometheusVersion: 2.40.0
+    uid: prometheus
+
+  # Grafana Tempo for distributed tracing
+  - name: Tempo
+    type: tempo
+    access: proxy
+    url: http://tempo:3200
+    uid: tempo
+    jsonData:
+      httpMethod: GET
+      tracesToLogsV2:
+        datasourceUid: 'loki'
+        tags: ['job', 'instance', 'pod', 'namespace']
+        query: '{job="spring-boot-app"} |= `$${__span.traceId}`'
+        startTimeShift: '-1h'
+        spanStartTimeShift: '1h'
+        spanEndTimeShift: '-1h'
+        filterByTraceID: true
+        filterBySpanID: false
+        customQuery: true
+      tracesToMetrics:
+        datasourceUid: 'prometheus'
+        tags: [
+          { key: 'service.name', value: 'service' },
+          { key: 'job' },
+          { key: 'instance' },
+          { key: 'user_id' },
+          { key: 'organisation_id' }
+        ]
+        queries:
+          - name: 'Request Rate'
+            query: 'sum(rate(http_server_requests_total{$$__tags}[5m]))'
+          - name: 'Request Duration'
+            query: 'histogram_quantile(0.9, sum(rate(http_server_requests_duration_seconds_bucket{$$__tags}[5m])) by (le))'
+          - name: 'Request Errors'
+            query: 'sum(rate(http_server_requests_total{$$__tags,status=~"5.."}[5m]))'
+      serviceMap:
+        datasourceUid: 'prometheus'
+      nodeGraph:
+        enabled: true
+      search:
+        hide: false
+      lokiSearch:
+        datasourceUid: 'loki'
+
+  # Grafana Loki for logs
+  - name: Loki
+    type: loki
+    access: proxy
+    url: http://loki:3100
+    uid: loki
+    jsonData:
+      maxLines: 1000
+      derivedFields:
+        # Extract trace ID from JSON logs and link to Tempo
+        - name: TraceID
+          label: trace_id
+          url: '$${__value.raw}'
+          datasourceUid: tempo
+          matcherRegex: '"trace_id":"([a-f0-9]+)"'
+          matcherType: 'regex'
+
+        # Extract trace ID from plain text logs
+        - name: TraceIDPlain
+          label: trace_id_plain
+          url: '$${__value.raw}'
+          datasourceUid: tempo
+          matcherRegex: '\[([a-f0-9]{16}),([a-f0-9]{16})\]'
+          matcherType: 'regex'
+
+        # Extract user information for filtering
+        - name: UserID
+          label: user_id
+          matcherRegex: '"user_id":"([^"]*)"'
+          matcherType: 'regex'
+
+        - name: Username
+          label: username
+          matcherRegex: '"username":"([^"]*)"'
+          matcherType: 'regex'

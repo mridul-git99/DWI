@@ -1,0 +1,29 @@
+{
+  "compilerOptions": {
+    "lib": ["dom", "dom.iterable", "esnext"],
+    "outDir": "./dist",
+    "target": "es5",
+    "module": "esnext",
+    "allowJs": true,
+    "esModuleInterop": true,
+    "jsx": "react",
+    "moduleResolution": "node",
+    "noImplicitAny": true,
+    "strict": true,
+    "resolveJsonModule": true,
+    "skipLibCheck": true,
+    "allowSyntheticDefaultImports": true,
+    "downlevelIteration": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "sourceMap": true,
+    "baseUrl": ".",
+    "paths": {
+      "#*": ["src/*"],
+      "test/*": ["test/*"],
+      "test-utils": ["test/__setup__/test-utils"]
+    }
+  },
+  "exclude": ["node_modules"],
+  "include": ["src/*"]
+}

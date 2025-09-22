@@ -1,0 +1,190 @@
+<!--Enhanced logback configuration with correlation IDs for Grafana + Tempo + Loki observability-->
+<configuration debug="true">
+  <!-- Spring properties integration -->
+  <springProperty scope="context" name="appConfigLocation" source="spring.config.location"/>
+  <springProperty scope="context" name="appName" source="spring.application.name" defaultValue="backend-dwi"/>
+  <springProperty scope="context" name="environment" source="spring.profiles.active" defaultValue="production"/>
+
+  <!-- Load application properties -->
+  <if condition='isDefined("appConfigLocation")'>
+    <then>
+      <!-- Use when application.properties is not a part of executable jar -->
+      <property resource="${appConfigLocation}/application.properties"/>
+    </then>
+    <else>
+      <!-- Use when application.properties is not a part of executable jar or for local environment -->
+      <property resource="application.properties"/>
+    </else>
+  </if>
+
+  <!-- Log paths configuration -->
+  <property name="LOG_PATH" value="${logging.file.path:-logs}"/>
+  <property name="LOG_ARCHIVED_PATH" value="${LOG_PATH}/archived"/>
+  <property name="LOG_LEVEL" value="${logging.level:-debug}"/>
+
+  <!-- Enhanced log patterns with full correlation and user context -->
+  <property name="CONSOLE_PATTERN"
+            value="%date{yyyy-MM-dd'T'HH:mm:ss.SSSXXX} [%thread] %highlight(%-5level) [%X{traceId:-},%X{spanId:-}] [%X{requestId:-}] [%X{userId:-}|%X{username:-}|%X{employeeId:-}] [%logger{45}] %message%n%ex{5}"/>
+
+  <property name="FILE_PATTERN"
+            value="%date{yyyy-MM-dd'T'HH:mm:ss.SSSXXX} [%thread] %-5level [%X{traceId:-},%X{spanId:-}] [%X{requestId:-}] [%X{userId:-}|%X{username:-}|%X{employeeId:-}] [%logger{45}] %message%n%ex{5}"/>
+
+  <!-- Console appender with enhanced correlation tracking -->
+  <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
+    <encoder>
+      <charset>UTF-8</charset>
+      <pattern>${CONSOLE_PATTERN}</pattern>
+    </encoder>
+  </appender>
+
+  <!-- Main application log file with correlation IDs -->
+  <appender name="FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+    <file>${LOG_PATH}/app.log</file>
+    <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
+      <!-- rollover daily -->
+      <fileNamePattern>${LOG_ARCHIVED_PATH}/app-%d{yyyy-MM-dd}.%i.log.gz</fileNamePattern>
+      <maxFileSize>50MB</maxFileSize>
+      <maxHistory>365</maxHistory>
+      <totalSizeCap>25GB</totalSizeCap>
+    </rollingPolicy>
+    <encoder>
+      <charset>UTF-8</charset>
+      <pattern>${FILE_PATTERN}</pattern>
+    </encoder>
+  </appender>
+
+  <!-- JSON structured logging for Loki integration -->
+  <appender name="JSON_FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+    <file>${LOG_PATH}/app-json.log</file>
+    <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
+      <fileNamePattern>${LOG_ARCHIVED_PATH}/app-json-%d{yyyy-MM-dd}.%i.log.gz</fileNamePattern>
+      <maxFileSize>50MB</maxFileSize>
+      <maxHistory>365</maxHistory>
+      <totalSizeCap>25GB</totalSizeCap>
+    </rollingPolicy>
+    <encoder class="net.logstash.logback.encoder.LogstashEncoder">
+      <includeContext>true</includeContext>
+      <includeMdc>true</includeMdc>
+      <customFields>{"application":"${appName}","environment":"${environment}","server":"production"}</customFields>
+      <fieldNames>
+        <timestamp>@timestamp</timestamp>
+        <message>message</message>
+        <level>level</level>
+        <thread>thread</thread>
+        <logger>logger</logger>
+      </fieldNames>
+    </encoder>
+  </appender>
+
+  <!-- SQL logs with enhanced correlation -->
+  <appender name="SQL" class="ch.qos.logback.core.rolling.RollingFileAppender">
+    <file>${LOG_PATH}/sql.log</file>
+    <filter class="ch.qos.logback.core.filter.EvaluatorFilter">
+      <evaluator>
+        <expression>return (message.contains("Releasing statement") &amp;&amp;
+          (message.contains("insert") || message.contains("update") || message.contains("delete")) &amp;&amp;
+          !message.contains("insert into email_audits"));
+        </expression>
+      </evaluator>
+      <OnMatch>ACCEPT</OnMatch>
+      <OnMismatch>DENY</OnMismatch>
+    </filter>
+    <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
+      <!-- rollover daily -->
+      <fileNamePattern>${LOG_ARCHIVED_PATH}/sql-%d{yyyy-MM-dd}.%i.log.gz</fileNamePattern>
+      <maxFileSize>50MB</maxFileSize>
+      <maxHistory>365</maxHistory>
+      <totalSizeCap>25GB</totalSizeCap>
+    </rollingPolicy>
+    <encoder>
+      <charset>UTF-8</charset>
+      <pattern>${FILE_PATTERN}</pattern>
+    </encoder>
+  </appender>
+
+  <!-- Error-only logs for critical issues -->
+  <appender name="ERROR_FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+    <file>${LOG_PATH}/error.log</file>
+    <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
+      <fileNamePattern>${LOG_ARCHIVED_PATH}/error-%d{yyyy-MM-dd}.%i.log.gz</fileNamePattern>
+      <maxFileSize>50MB</maxFileSize>
+      <maxHistory>365</maxHistory>
+      <totalSizeCap>10GB</totalSizeCap>
+    </rollingPolicy>
+    <encoder class="net.logstash.logback.encoder.LogstashEncoder">
+      <includeContext>true</includeContext>
+      <includeMdc>true</includeMdc>
+      <customFields>{"application":"${appName}","environment":"${environment}","log_type":"error"}</customFields>
+    </encoder>
+  </appender>
+
+  <!-- Async appenders for performance -->
+  <appender name="ASYNC-SQL" class="ch.qos.logback.classic.AsyncAppender">
+    <queueSize>512</queueSize>
+    <discardingThreshold>0</discardingThreshold>
+    <appender-ref ref="SQL"/>
+  </appender>
+
+  <appender name="ASYNC-JSON" class="ch.qos.logback.classic.AsyncAppender">
+    <queueSize>512</queueSize>
+    <discardingThreshold>0</discardingThreshold>
+    <appender-ref ref="JSON_FILE"/>
+  </appender>
+
+  <appender name="ASYNC-ERROR" class="ch.qos.logback.classic.AsyncAppender">
+    <queueSize>256</queueSize>
+    <discardingThreshold>0</discardingThreshold>
+    <appender-ref ref="ERROR_FILE"/>
+    <filter class="ch.qos.logback.classic.filter.LevelFilter">
+      <level>ERROR</level>
+      <onMatch>ACCEPT</onMatch>
+      <onMismatch>DENY</onMismatch>
+    </filter>
+  </appender>
+
+  <!-- Loggers configuration -->
+
+  <!-- SQL logging with correlation -->
+  <logger name="org.hibernate.resource.jdbc.internal.ResourceRegistryStandardImpl" level="trace" additivity="false">
+    <appender-ref ref="ASYNC-SQL"/>
+  </logger>
+
+  <!-- Spring Security for security events -->
+  <logger name="org.springframework.security" level="INFO" additivity="false">
+    <appender-ref ref="FILE"/>
+    <appender-ref ref="ASYNC-JSON"/>
+  </logger>
+
+  <!-- OpenTelemetry tracing logs -->
+  <logger name="io.opentelemetry" level="INFO" additivity="false">
+    <appender-ref ref="FILE"/>
+  </logger>
+
+  <!-- Micrometer tracing logs -->
+  <logger name="io.micrometer.tracing" level="INFO" additivity="false">
+    <appender-ref ref="FILE"/>
+  </logger>
+
+  <!-- HTTP request logging -->
+  <logger name="org.springframework.web.filter.CommonsRequestLoggingFilter" level="DEBUG" additivity="false">
+    <appender-ref ref="FILE"/>
+    <appender-ref ref="ASYNC-JSON"/>
+  </logger>
+
+  <!-- Your application logger with full observability -->
+  <logger name="com.leucine" level="${LOG_LEVEL}" additivity="false">
+    <appender-ref ref="STDOUT"/>
+    <appender-ref ref="FILE"/>
+    <appender-ref ref="ASYNC-JSON"/>
+    <appender-ref ref="ASYNC-ERROR"/>
+  </logger>
+
+  <!-- Root logger -->
+  <root level="${logging.level.root:-warn}">
+    <appender-ref ref="STDOUT"/>
+    <appender-ref ref="FILE"/>
+    <appender-ref ref="ASYNC-JSON"/>
+    <appender-ref ref="ASYNC-ERROR"/>
+  </root>
+
+</configuration>

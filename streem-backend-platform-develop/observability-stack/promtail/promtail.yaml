@@ -1,0 +1,114 @@
+server:
+  http_listen_port: 9080
+  grpc_listen_port: 0
+
+positions:
+  filename: /tmp/positions.yaml
+
+clients:
+  - url: http://loki:3100/loki/api/v1/push
+
+scrape_configs:
+  # Spring Boot Application Logs (Plain text with correlation IDs)
+  - job_name: spring-boot-app
+    static_configs:
+      - targets:
+          - localhost
+        labels:
+          job: spring-boot-app
+          service: backend-dwi
+          environment: production
+          log_type: application
+          __path__: /var/log/app/app.log
+    pipeline_stages:
+      # Parse the enhanced log format with correlation IDs
+      - regex:
+          expression: '(?P<timestamp>\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}[+-]\d{2}:\d{2}) \[(?P<thread>[^\]]+)\] (?P<level>\w+)\s+\[(?P<trace_id>[^,]*),(?P<span_id>[^,]*)\] \[(?P<request_id>[^\]]*)\] \[(?P<user_id>[^|]*)\|(?P<username>[^|]*)\|(?P<employee_id>[^\]]*)\] \[(?P<logger>[^\]]+)\] (?P<message>.*)'
+
+      # Add parsed fields as labels
+      - labels:
+          level:
+          thread:
+          trace_id:
+          span_id:
+          request_id:
+          user_id:
+          username:
+          employee_id:
+          logger:
+
+      # Set timestamp from log
+      - timestamp:
+          source: timestamp
+          format: '2006-01-02T15:04:05.000-07:00'
+
+  # Spring Boot JSON Logs for structured parsing
+  - job_name: spring-boot-json
+    static_configs:
+      - targets:
+          - localhost
+        labels:
+          job: spring-boot-json
+          service: backend-dwi
+          environment: production
+          log_type: structured
+          __path__: /var/log/app/app-json.log
+    pipeline_stages:
+      # Parse JSON logs
+      - json:
+          expressions:
+            level: level
+            message: message
+            timestamp: '"@timestamp"'
+            logger: logger
+            thread: thread
+            trace_id: traceId
+            span_id: spanId
+            request_id: requestId
+            user_id: userId
+            username: username
+            employee_id: employeeId
+            organisation_id: organisationId
+            facility_id: facilityId
+            application: application
+            environment: environment
+
+      # Add parsed fields as labels
+      - labels:
+          level:
+          logger:
+          trace_id:
+          span_id:
+          request_id:
+          user_id:
+          username:
+          employee_id:
+          organisation_id:
+          facility_id:
+
+      # Set timestamp from log
+      - timestamp:
+          source: timestamp
+          format: '2006-01-02T15:04:05.000Z'
+
+  # Spring Boot Console Logs (simplified for now)
+  - job_name: spring-boot-console
+    static_configs:
+      - targets:
+          - localhost
+        labels:
+          job: spring-boot-console
+          service: backend-dwi
+          environment: production
+          log_type: console
+          __path__: /var/log/app/console.log
+    # Simplified - just capture as-is without complex parsing
+    pipeline_stages:
+      - regex:
+          expression: '(?P<timestamp>\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}[+-]\d{2}:\d{2}) \[(?P<thread>[^\]]+)\] (?P<level>\w+).*'
+      - labels:
+          level:
+          thread:
+      - timestamp:
+          source: timestamp
+          format: '2006-01-02T15:04:05.000-07:00'

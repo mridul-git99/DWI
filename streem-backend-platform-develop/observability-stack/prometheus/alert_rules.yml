@@ -1,0 +1,93 @@
+groups:
+  - name: spring-boot-alerts
+    rules:
+      # High error rate alert
+      - alert: HighErrorRate
+        expr: rate(http_server_requests_total{status=~"5.."}[5m]) > 0.1
+        for: 5m
+        labels:
+          severity: critical
+          service: spring-boot-app
+        annotations:
+          summary: "High error rate detected in Spring Boot application"
+          description: "Error rate is {{ $value }} errors per second (threshold: 0.1) for the last 5 minutes"
+          runbook_url: "https://your-runbook-url.com/high-error-rate"
+
+      # High response time alert
+      - alert: HighResponseTime
+        expr: histogram_quantile(0.95, rate(http_server_requests_duration_seconds_bucket[5m])) > 2
+        for: 5m
+        labels:
+          severity: warning
+          service: spring-boot-app
+        annotations:
+          summary: "High response time detected"
+          description: "95th percentile response time is {{ $value }}s (threshold: 2s) for the last 5 minutes"
+
+      # Application down alert
+      - alert: SpringBootAppDown
+        expr: up{job="spring-boot-app"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          service: spring-boot-app
+        annotations:
+          summary: "Spring Boot application is down"
+          description: "Spring Boot application has been down for more than 1 minute"
+
+      # Database connection pool alert
+      - alert: DatabaseConnectionPoolHigh
+        expr: hikaricp_connections_active / hikaricp_connections_max > 0.8
+        for: 2m
+        labels:
+          severity: warning
+          service: spring-boot-app
+        annotations:
+          summary: "Database connection pool usage high"
+          description: "Connection pool usage is {{ $value | humanizePercentage }} (threshold: 80%)"
+
+      # JVM memory usage alert
+      - alert: JVMMemoryHigh
+        expr: jvm_memory_used_bytes{area="heap"} / jvm_memory_max_bytes{area="heap"} > 0.85
+        for: 5m
+        labels:
+          severity: warning
+          service: spring-boot-app
+        annotations:
+          summary: "JVM heap memory usage high"
+          description: "JVM heap memory usage is {{ $value | humanizePercentage }} (threshold: 85%)"
+
+  - name: infrastructure-alerts
+    rules:
+      # Prometheus down
+      - alert: PrometheusDown
+        expr: up{job="prometheus"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          service: prometheus
+        annotations:
+          summary: "Prometheus is down"
+          description: "Prometheus has been down for more than 1 minute"
+
+      # Grafana down
+      - alert: GrafanaDown
+        expr: up{job="grafana"} == 0
+        for: 2m
+        labels:
+          severity: warning
+          service: grafana
+        annotations:
+          summary: "Grafana is down"
+          description: "Grafana has been down for more than 2 minutes"
+
+      # Loki down
+      - alert: LokiDown
+        expr: up{job="loki"} == 0
+        for: 2m
+        labels:
+          severity: warning
+          service: loki
+        annotations:
+          summary: "Loki is down"
+          description: "Loki has been down for more than 2 minutes"

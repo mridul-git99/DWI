@@ -1,0 +1,234 @@
+name: Deployment Pipeline
+
+on:
+  issue_comment:
+    types: [created]
+
+jobs:       
+  CD:
+    runs-on: ubuntu-latest
+    
+    steps:
+
+      # Checkout Code: Uses actions/checkout@v2 action to download the repository code.Fetch depth limited to 1 for faster execution.
+      - uses: actions/checkout@v2
+        with:
+          fetch-depth: 1
+
+      - name: Extract
+        id: extract
+        run: |
+            body="${{ github.event.issue.body }}"
+            host="$(echo "${{ github.event.issue.body }}" | grep -oP '(?<=URL: ).*')"
+            branch="$(echo "${{ github.event.issue.body }}" | grep -oP '(?<=BRANCH: ).*')"
+            urgency="$(echo "${{ github.event.issue.body }}" | grep -oP '(?<=URGENCY: ).*')"
+            request_by="$(echo "${{ github.event.issue.body }}" | grep -oP '(?<=REQUEST BY: ).*')"
+            slack_url="$(echo "${{ github.event.issue.body }}" | grep -oP '(?<=SLACK LINK: ).*')"
+            slack_channel_id=$(echo "$slack_url" | sed -E 's/https:\/\/leucinetech.slack.com\/archives\/([^\/]+)\/\w+/\1/')
+            ts=$(echo "$slack_url" | sed -E 's/https:\/\/leucinetech.slack.com\/archives\/[^/]+\/(\w+)$/\1/')            
+            ts=${ts:1}
+            sec=${ts:0:-6}
+            microsec=${ts: -6}
+            slack_thread_id="$sec.$microsec"
+            echo "host=$host" >> "$GITHUB_OUTPUT"
+            echo "branch=$branch" >> $GITHUB_OUTPUT
+            echo "urgency=$urgency" >> $GITHUB_OUTPUT
+            echo "request_by=$request_by" >> $GITHUB_OUTPUT
+            echo "slack_url=$slack_url" >> "$GITHUB_OUTPUT"
+            echo "slack_channel_id=$slack_channel_id" >> "$GITHUB_OUTPUT"
+            echo "slack_thread_id=$slack_thread_id" >> "$GITHUB_OUTPUT"
+            echo $slack_thread_id
+
+      - name: Check for approval state
+        id: check-comment
+        run: |
+          echo "${{ github.event_path }}"
+          comments_url=$(jq -r '.issue.comments_url' "${{ github.event_path }}")
+          last_comment_body=$(curl -sSL -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" $comments_url | jq -r '.[-1].body')
+          echo "Last Comment Body: $last_comment_body"
+          if [[ "$last_comment_body" == "APPROVE"* ]]; then
+            echo "Pipeline approved. Running the pipeline..."
+          elif [[ "$last_comment_body" == "DENY"* ]]; then
+            echo "Pipeline denied. Failing the pipeline."
+            reason=$(echo "${last_comment_body}" | sed 's/DENY//g')
+            reason="Your request has been denied: $reason"
+            echo "reason=$reason" >> "$GITHUB_ENV"
+            echo "trigger=DENY" >> "$GITHUB_ENV"
+            exit 1
+            # curl -X POST "https://slack.com/api/chat.postMessage" \
+            # -H "Authorization: Bearer xoxb-295440632114-2597456177377-nrfw6X4HS5qFP9U3x4X3kJaz" \
+            # -H "Content-Type: application/json" \
+            # -d "{\"channel\":\"${{ steps.extract.outputs.slack_channel_id }}\",\"thread_ts\":\"${{ steps.extract.outputs.slack_thread_id }}\",\"text\":\"$reason\"}"
+          
+          else
+            echo "Action not identified. Pipeline denied. Failing the pipeline."
+            exit 1
+          fi      
+
+      - name: Validate Branch
+        id: branch_check
+        run: |
+            branch_name=$(echo "${{ github.event.issue.title }}" | grep -oP 'Branch: \K\S+')
+            if git rev-parse --quiet --verify "refs/heads/$branch_name"; then
+              echo "Branch $branch_name exists. Pipeline can proceed."
+              echo "BRANCH_EXISTS=true" >> "$GITHUB_OUTPUT"
+            else
+              echo "Branch $branch_name does not exist. Failing the pipeline."
+              echo "BRANCH_EXISTS=false" >> "$GITHUB_OUTPUT"
+              reason="Step: 'Validate Branch' failed"
+              echo "reason=$reason" >> "$GITHUB_ENV"  # Set the reason as an environment variable
+              exit 1
+            fi
+
+      - name: Determine Deployment Path from URL
+        id: issue_details
+        run: |
+          ISSUE_BODY="${{ github.event.issue.body }}"
+          echo "Issue Body: $ISSUE_BODY"
+          host=$(echo "$ISSUE_BODY" | grep -o 'URL: .*' | cut -d ' ' -f 2-)  # Changed URL to host
+          BRANCH=$(echo "$ISSUE_BODY" | grep -o 'BRANCH: .*' | cut -d ' ' -f 2-)
+          URGENCY=$(echo "$ISSUE_BODY" | grep -o 'URGENCY: .*' | cut -d ' ' -f 2-)
+          REQUEST_BY=$(echo "$ISSUE_BODY" | grep -o 'REQUEST BY: .*' | cut -d ' ' -f 3-)
+          SLACK_LINK=$(echo "$ISSUE_BODY" | grep -o 'SLACK LINK: .*' | cut -d ' ' -f 3-)
+          
+          echo "host=$host" >> "$GITHUB_OUTPUT"
+          
+      - name: Determine Deployment Path from HOST
+        run: |
+          host="${{ steps.issue_details.outputs.host }}"
+          JSON_CONTENT=$(cat $GITHUB_WORKSPACE/configuration.json)
+          DEPLOYMENT_PATH=$(echo "$JSON_CONTENT" | jq -r --arg url "$host" '.[$url].path')
+          USERNAME=$(echo "$JSON_CONTENT" | jq -r --arg url "$host" '.[$url].username')
+          if [ "$DEPLOYMENT_PATH" != "null" ] && [ "$USERNAME" != "null" ]; then
+              echo "Deployment path for $host: $DEPLOYMENT_PATH"
+              echo "Username for $host: $USERNAME"
+              # echo "::set-env name=DEPLOYMENT_PATH::$DEPLOYMENT_PATH"
+          else
+              echo "Invalid host provided in issue: $host"
+              reason="Step: Determine Deployment Path from HOST failed"
+              echo "reason=$reason" >> "$GITHUB_ENV"
+              exit 1
+          fi
+     
+       # Extract Git & PR  related information
+      - name: Extract Git & PR related information
+        id: git_pr_info
+        env:
+          VARS_CONTEXT: ${{ toJson(vars) }}
+          GITHUB_CONTEXT: ${{ toJson(github) }}
+        run: |
+          echo "$VARS_CONTEXT" > vars_context.json
+          
+          if [ "${{ github.event_name }}" == "push" ]; then
+            event_type="PUSH"
+            branch="${{ github.ref }}"
+            branch="${branch#refs/heads/}"
+          elif [ "${{ github.event_name }}" == "pull_request" ]; then
+            event_type="PULL REQUEST"
+            branch="${{ github.event.pull_request.head.ref }}"
+          fi
+          
+          commit_id=${{ github.sha }}
+          run_id=${{ github.run_id }}
+          run_url="https://github.com/LeucineTech/streem-backend/actions/runs/$run_id"
+          pr_number="${{ github.event.pull_request.number }}"
+          pr_info=$(curl -sSL -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" "https://api.github.com/repos/${{ github.repository }}/pulls/$pr_number")
+          
+          temp_reviewer=$(echo "$pr_info" | jq -r '.requested_reviewers[0].login')
+          reviewer=$(echo "$temp_reviewer" | tr '-' '_')
+          slack_reviewer="SLACK_ID_${reviewer^^}"
+          reviewer_slack_id=$(jq -r --arg key "$slack_reviewer" '.[$key]' "vars_context.json")
+          
+          temp_committer=${{ github.actor }}
+          committer=$(echo "$temp_committer" | tr '-' '_')          
+          committer_name=$(git log -1 --pretty=format:'%an')
+          slack_committer="SLACK_ID_${committer^^}"
+          committer_slack_id=$(jq -r --arg key "$slack_committer" '.[$key]' "vars_context.json")
+          echo "BRANCH_NAME_SLASH_REPLACED=$(echo ${{ github.ref_name }} | tr / _)" >> $GITHUB_ENV
+          
+          echo "::set-output name=EVENT_TYPE::$event_type"
+          echo "::set-output name=BRANCH::$branch"
+          echo "::set-output name=COMMIT_ID::$commit_id"
+          echo "::set-output name=COMMITTER_NAME::$committer_name"
+          echo "::set-output name=REVIEWER_SLACK_ID::$reviewer_slack_id"
+          echo "::set-output name=COMMITTER_SLACK_ID::$committer_slack_id"
+          echo "::set-output name=RUN_URL::$run_url"
+          
+          echo "############################################"
+          echo "$event_type | $branch | $commit_id | Committer: $temp_committer, $committer_name, $committer_slack_id | Reviewer: $temp_reviewer, $reviewer_slack_id"
+     
+      
+      - name: Set up JDK
+        uses: actions/setup-java@v2
+        with:
+          java-version: 17
+          distribution: 'temurin'
+
+     # Extract Version: Extracts the project version from the build.gradle file. Stores the version in a GitHub environment variable (PROJECT_VERSION).
+      - name: Extract version from build.gradle
+        run: |
+          cd backend
+          VERSION=$(grep "^version" build.gradle | awk '{print $2}' | tr -d "'")
+          echo "Version is $VERSION"
+          echo "PROJECT_VERSION=$VERSION" >> $GITHUB_ENV
+          cd ..
+      # Build Backend Services: Uses gradlew bootJar command to build the backend services with the extracted version. This step includes compiling, packaging, and creating a JAR executable.
+      - name: Build backend services
+        run: |
+          sudo chmod +x $(pwd)/backend/build.gradle
+          sudo chmod +x ./gradlew
+          ./gradlew bootJar  
+
+      - name: Rename the artifact with branch name and version
+        run: |
+            mv $(pwd)/backend/build/libs/backend-*.jar $(pwd)/
+            sudo chmod 777 backend-*.jar
+            sleep 5
+            mv backend-*.jar ${{ env.BRANCH_NAME_SLASH_REPLACED }}-$PROJECT_VERSION.jar
+
+      - name: Upload DWI artifact to S3
+        env:
+          COMMIT_ID: "${{ steps.git_pr_info.outputs.COMMIT_ID }}"
+          S3_BUCKET: "leucine-artefacts"
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          # AWS_REGION: ${{ secrets.AWS_REGION }} # Replace with your AWS region
+          AWS_REGION: ap-south-1
+        run: |
+          aws s3 cp ${{ env.BRANCH_NAME_SLASH_REPLACED }}-$PROJECT_VERSION.jar s3://${S3_BUCKET}/dwi/
+    
+          
+      - name: Deploy on server and send slack message
+        env:
+          SSH_PRIVATE: ${{ secrets.SSH_PRIVATE }}
+        run: |
+         host="${{ steps.issue_details.outputs.host }}"
+         JSON_CONTENT=$(cat $GITHUB_WORKSPACE/configuration.json)
+         DEPLOYMENT_PATH=$(echo "$JSON_CONTENT" | jq -r --arg url "$host" '.[$url].path')
+         echo "$SSH_PRIVATE" > /home/runner/work/devops-playground/devops-playground/key.pem
+         chmod 400 /home/runner/work/devops-playground/devops-playground/key.pem
+         ssh_command="ssh -o StrictHostKeyChecking=no -i /home/runner/work/devops-playground/devops-playground/key.pem ubuntu@$host \"bash BE_deploy.sh --backend_version=$PROJECT_VERSION  --deployment_path='$DEPLOYMENT_PATH' --backend_artefact_name=backend-${{ env.BRANCH_NAME_SLASH_REPLACED }}-$PROJECT_VERSION --slack_channel_id=${{ steps.extract.outputs.slack_channel_id }} --slack_thread_id=${{ steps.extract.outputs.slack_thread_id }}\""
+         echo "$ssh_command"
+         eval "$ssh_command"
+
+      - name: Notify on failure
+        if: failure()
+        run: |
+            echo "Workflow failed or branch does not exist. Commenting on issue..."
+            reason="${{ env.reason }}"  # Retrieve the reason from the environment variable
+            curl -X POST "https://slack.com/api/chat.postMessage" \
+            -H "Authorization: Bearer xoxb-295440632114-2597456177377-nrfw6X4HS5qFP9U3x4X3kJaz" \
+            -H "Content-Type: application/json" \
+            -d "{\"channel\":\"${{ steps.extract.outputs.slack_channel_id }}\",\"thread_ts\":\"${{ steps.extract.outputs.slack_thread_id }}\",\"text\":\"$reason\"}"
+
+      - name: Close issue on successful deployment
+        if: success() # Only runs if the previous step (Run Deploy script) was successful
+        run: |
+          URL="${{ steps.issue_details.outputs.url }}"
+          ISSUE_NUMBER=$(jq -r '.issue.number' "${{ github.event_path }}")
+          # Use GitHub API to close the issue
+          curl -X PATCH \
+            -H "Authorization: Bearer ${{ secrets.GPR_TOKEN }}" \
+            -H "Content-Type: application/json" \
+            -d '{"state":"closed"}' \
+            "https://api.github.com/repos/${{ github.repository }}/issues/$ISSUE_NUMBER"      

@@ -1,0 +1,32 @@
+name: Deployment Request
+description: Place a Deployment Request
+title: "[DEPLOYMENT]: "
+labels: ["deployment"]
+body:
+  - type: input
+    id: version
+    attributes:
+      label: VERSION
+      description: What version needs to be deployed?
+      placeholder: ex. 4.0.0
+    validations:
+      required: true
+      
+  - type: input
+    id: url
+    attributes:
+      label: URL
+      description: Provide Url to be deployed on?
+      placeholder: a.dev.platform.leucinetech.com
+    validations:
+      required: true
+      
+  - type: input
+    id: branch
+    attributes:
+      label: BRANCH
+      description: Also tell us, what did you expect to happen?
+      placeholder: ex. master
+      value: "develop"
+    validations:
+      required: true

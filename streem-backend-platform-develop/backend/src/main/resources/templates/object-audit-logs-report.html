@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <title>Object Audit Logs Report – Leucine</title>
+
+  <style>
+    /* ──────────────────────────────────────────────────────────
+       0) PAGE / RESET
+    ────────────────────────────────────────────────────────── */
+    @page {
+      size: A4 landscape;
+      margin-top: 60px;
+      margin-bottom: 38px;
+      margin-left: 0;
+      margin-right: 0;
+      @top-center {
+        content: element(pageHeader);
+      }
+      @bottom-center {
+        content: element(pageFooter);
+      }
+    }
+
+    html, body {
+      margin: 0;
+      padding: 0;
+      font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+      font-size: 10pt;
+      color: #000;
+    }
+
+    p, h3, h4 {
+      margin: 0;
+    }
+
+    ul { 
+      list-style: none; 
+      margin: 0; 
+      padding: 0; 
+    }
+
+    /* ──────────────────────────────────────────────────────────
+       1) HEADER & FOOTER
+    ────────────────────────────────────────────────────────── */
+    .header {
+      position: running(pageHeader);
+      background: #eeeeee;
+      padding: 10px 20px;
+    }
+
+    .header img {
+      height: 8mm;
+    }
+
+    .footer {
+      position: running(pageFooter);
+      background: #eeeeee;
+      font-size: 9pt;
+      padding: 8px 20px;
+    }
+
+    .footer-table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    .footer-table td {
+      vertical-align: middle;
+    }
+
+    .page-counter::after {
+      content: counter(page) " / " counter(pages);
+      display: inline-block;
+      background: #bababa;
+      border-radius: 4px;
+      padding: 2px 8px;
+      font-weight: bold;
+      white-space: nowrap;
+    }
+
+    /* ──────────────────────────────────────────────────────────
+       2) CONTENT WRAPPER
+    ────────────────────────────────────────────────────────── */
+    .content {
+      margin: 0 16px;
+    }
+
+    .page-break {
+      page-break-before: always;
+      break-before: page;
+    }
+    
+    /* Use this class on elements that should start on a new page */
+    .new-page {
+      page-break-before: always;
+    }
+
+    .title {
+      font-size: 24pt;
+      margin-bottom: 15pt;
+    }
+
+    /* ============== SECTION TITLE ============== */
+    .section-title {
+      background-color: #000000;
+      color: #ffffff;
+      font-weight: bold;
+      font-size: 11pt;
+      padding: 2pt 8pt;
+      min-width: 155pt;
+      display: inline-block;
+      border-top-left-radius: 5pt;
+      border-top-right-radius: 5pt;
+      border-bottom: none;
+      margin: 0;
+    }
+
+    /* ============== DETAIL PANEL ============== */
+    .detail-panel {
+      background-color: #f4f4f4;
+      padding: 8pt;
+      border: 1pt solid #dadada;
+      border-top: none;
+      margin-bottom: 15pt;
+    }
+
+    .detail-panel table.detail-table {
+      width: 100%;
+      border-collapse: separate;
+      border-spacing: 0 8pt;
+      margin-bottom: 0;
+    }
+
+    .detail-panel table.detail-table th,
+    .detail-panel table.detail-table td {
+      vertical-align: middle;
+    }
+
+    .detail-panel table.detail-table th {
+      width: 33%;
+      font-weight: bold;
+      color: #666666;
+      text-transform: capitalize;
+      font-size: 10pt;
+      border: none;
+      text-align: left;
+    }
+
+    .detail-panel table.detail-table td {
+      border: 1pt solid #000000;
+      padding: 0 4pt;
+      font-size: 10pt;
+      background: none;
+    }
+
+    /* ============== OBJECT AUDIT LOG TABLE ============== */
+    .object-audit-log-table {
+      margin-top: 20pt;
+      margin-bottom: 15pt;
+    }
+
+    .object-audit-log-table table {
+      width: 100%;
+      border-collapse: collapse;
+      table-layout: fixed;
+    }
+
+    .object-audit-log-table th {
+      font-size: 11pt;
+      font-weight: bold;
+      background-color: #F5F5F5;
+      text-align: center;
+      padding: 4pt;
+      border: 1pt solid #000;
+      vertical-align: middle;
+    }
+
+    .object-audit-log-table td {
+      font-size: 10pt;
+      padding: 4pt;
+      border: 1pt solid #000;
+      vertical-align: middle;
+      word-wrap: break-word;
+      overflow-wrap: break-word;
+      word-break: break-word;
+      white-space: pre-wrap;
+    }
+
+    /* Row styling */
+    .object-audit-log-table tr {
+      background-color: #ffffff; /* White background for all rows */
+    }
+    
+    .object-audit-log-table .last-few-row {
+      /* Special styling for the last few rows to ensure they're visible */
+      font-weight: normal;
+    }
+    
+    /* ============== OBJECT DETAILS SECTION ============== */
+    .object-details-section {
+      margin-bottom: 15pt;
+    }
+    
+    /* ============== FILTER STYLES ============== */
+    .filter-item {
+      margin-bottom: 5px;
+    }
+    
+    .filter-value {
+      display: inline-block;
+      padding: 2px 8px;
+      border: 1px solid #000;
+      margin: 0 5px;
+    }
+    
+    /* Simple spacing for checkbox options */
+    .checkbox-option {
+      margin-bottom: 3px;
+    }
+    
+    /* Task number styling in instructions */
+    .task-number {
+      font-size: 0.9em;
+      color: #666;
+      margin-right: 5px;
+    }
+    
+  </style>
+</head>
+
+<body>
+<!-- Header -->
+<div class="header">
+  <table style="width:100%;">
+    <tr>
+      <td style="text-align:left;">
+        <img src="{{CLIENT_LOGO}}" alt="Client Logo">
+      </td>
+      <td style="text-align:right;">
+        <img src="{{LEUCINE_LOGO}}" alt="Leucine Logo">
+      </td>
+    </tr>
+  </table>
+</div>
+
+<!-- Footer (text left, page number right inside a box) -->
+<div class="footer">
+  <table class="footer-table">
+    <tr>
+      <td style="text-align:left;">
+        Downloaded on {{GENERATED_AT}}. By {{USER}} ID: {{USER_ID}} for Facility: {{FACILITY}} using {{APP_LABEL}} - Leucine App
+      </td>
+      <td style="text-align:right;">
+        <span class="page-counter"></span>
+      </td>
+    </tr>
+  </table>
+</div>
+
+<div class="content">
+  {{content}}
+</div>
+</body>
+</html>

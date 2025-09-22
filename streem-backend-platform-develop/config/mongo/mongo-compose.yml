@@ -1,0 +1,28 @@
+version: '3'
+services:
+  mongodb:
+    image: mongo:5.0
+    container_name: mongo
+    volumes:
+      - /data/mongo:/data/db
+      - ./mongod.conf:/etc/mongod.conf.orig
+      - ./mongo.keyfile:/data/mongo.keyfile
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: root
+    ports:
+      - 27017:27017
+    entrypoint:
+      - bash
+      - -c
+      - |
+          chmod 400 /data/mongo.keyfile
+          chown 999:999 /data/mongo.keyfile
+          exec docker-entrypoint.sh $$@
+    command: ["--bind_ip_all", "--keyFile", "/data/mongo.keyfile",  "--replSet", "rs0"]
+    healthcheck:
+      test: echo 'db.runCommand("ping").ok' | mongosh mongo:27017/test --quiet
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    restart: unless-stopped

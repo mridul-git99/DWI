@@ -1,0 +1,108 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="ChangeListManager">
+    <list default="true" id="cbbf1005-f18e-47e7-95dd-aaf4cd4d0bb6" name="Changes" comment="">
+      <change beforePath="$PROJECT_DIR$/src/App.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/App.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/services/uiPermissions.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/services/uiPermissions.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/utils/apiUrls.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/utils/apiUrls.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/utils/constants.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/utils/constants.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/utils/parameterUtils.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/utils/parameterUtils.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/views/Jobs/Components/Documents/utils.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/views/Jobs/Components/Documents/utils.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/views/Jobs/PdfWorker/LoadPdfWorker.tsx" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/views/Jobs/PdfWorker/worker.tsx" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/views/Jobs/PrintJob/InitialPage.tsx" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/views/Jobs/PrintJob/JobPdf.tsx" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/views/Jobs/PrintJob/PrintContext.tsx" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/views/Jobs/PrintJob/Task.tsx" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/views/Jobs/PrintJob/constant.ts" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/views/Jobs/PrintJob/index.tsx" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/views/Jobs/PrintJob/styles.ts" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/views/Jobs/PrintJob/types.ts" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/views/Jobs/PrintJobAuditLogs/JobAuditLogsPdf.tsx" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/views/Jobs/PrintJobAuditLogs/index.tsx" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/views/Jobs/PrintJobAuditLogs/types.ts" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/views/Jobs/PrintJobLogs/FirstPage.tsx" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/views/Jobs/PrintJobLogs/PrintJobLogs.tsx" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/views/Jobs/PrintJobLogs/index.tsx" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/views/Ontology/PrintObjectChangeLogs/FirstPage.tsx" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/views/Ontology/PrintObjectChangeLogs/PrintObjectChangeLogs.tsx" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/views/Ontology/PrintObjectChangeLogs/index.tsx" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/views/Ontology/PrintObjectJobLogs/FirstPage.tsx" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/views/Ontology/PrintObjectJobLogs/PrintObjectJobLogs.tsx" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/views/Ontology/PrintObjectJobLogs/index.tsx" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/views/UserAccess/PrintSessionActivity/PrintSessionActivityPdf.tsx" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/views/UserAccess/PrintSessionActivity/index.tsx" beforeDir="false" />
+    </list>
+    <option name="SHOW_DIALOG" value="false" />
+    <option name="HIGHLIGHT_CONFLICTS" value="true" />
+    <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
+    <option name="LAST_RESOLUTION" value="IGNORE" />
+  </component>
+  <component name="Git.Settings">
+    <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
+  </component>
+  <component name="ProjectColorInfo">{
+  &quot;associatedIndex&quot;: 4
+}</component>
+  <component name="ProjectId" id="2yOzZxp8PPoyDAAYzJdFdUtkhXV" />
+  <component name="ProjectViewState">
+    <option name="hideEmptyMiddlePackages" value="true" />
+    <option name="showLibraryContents" value="true" />
+  </component>
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    "ModuleVcsDetector.initialDetectionPerformed": "true",
+    "RunOnceActivity.ShowReadmeOnStart": "true",
+    "RunOnceActivity.git.unshallow": "true",
+    "last_opened_file_path": "/home/kousik/leucine/streem-frontend",
+    "node.js.detected.package.eslint": "true",
+    "node.js.selected.package.eslint": "(autodetect)",
+    "nodejs_package_manager_path": "yarn",
+    "settings.editor.selected.configurable": "settings.typescriptcompiler",
+    "ts.external.directory.path": "/snap/intellij-idea-ultimate/618/plugins/javascript-plugin/jsLanguageServicesImpl/external",
+    "vue.rearranger.settings.migration": "true"
+  }
+}]]></component>
+  <component name="RunManager">
+    <configuration default="true" type="JetRunConfigurationType">
+      <module name="streem-frontend" />
+      <method v="2">
+        <option name="Make" enabled="true" />
+      </method>
+    </configuration>
+    <configuration default="true" type="KotlinStandaloneScriptRunConfigurationType">
+      <module name="streem-frontend" />
+      <option name="filePath" />
+      <method v="2" />
+    </configuration>
+  </component>
+  <component name="SharedIndexes">
+    <attachedChunks>
+      <set>
+        <option value="bundled-jdk-9823dce3aa75-fbdcb00ec9e3-intellij.indexing.shared.core-IU-251.26094.121" />
+        <option value="bundled-js-predefined-d6986cc7102b-b26f3e71634d-JavaScript-IU-251.26094.121" />
+      </set>
+    </attachedChunks>
+  </component>
+  <component name="TaskManager">
+    <task active="true" id="Default" summary="Default task">
+      <changelist id="cbbf1005-f18e-47e7-95dd-aaf4cd4d0bb6" name="Changes" comment="" />
+      <created>1749720468475</created>
+      <option name="number" value="Default" />
+      <option name="presentableId" value="Default" />
+      <updated>1749720468475</updated>
+      <workItem from="1749720469896" duration="80000" />
+      <workItem from="1749720560224" duration="28000" />
+      <workItem from="1749720611434" duration="35000" />
+      <workItem from="1749732698716" duration="84000" />
+    </task>
+    <servers />
+  </component>
+  <component name="TypeScriptGeneratedFilesManager">
+    <option name="version" value="3" />
+  </component>
+  <component name="XSLT-Support.FileAssociations.UIState">
+    <expand />
+    <select />
+  </component>
+</project>

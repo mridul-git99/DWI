@@ -1,0 +1,359 @@
+name: DWI CI Pipeline
+
+on:
+  schedule:
+    - cron: '30 18 * * *'
+
+env:
+  COVERAGE_BENCHMARK: 15
+  IS_COVERAGE_FAILED: false
+
+jobs:
+  build-test-report:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:11-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: dwi
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+          --name postgres
+
+    steps:
+
+      # Checkout Code: Uses actions/checkout@v2 action to download the repository code.Fetch depth limited to 1 for faster execution.
+      - uses: actions/checkout@v2
+        with:
+          ref: platform-develop
+          fetch-depth: 1
+
+       # Extract Git & PR  related information
+      - name: Extract Git & PR related information
+        id: git_pr_info
+        env:
+          VARS_CONTEXT: ${{ toJson(vars) }}
+          GITHUB_CONTEXT: ${{ toJson(github) }}
+        run: |
+          echo "$VARS_CONTEXT" > vars_context.json
+          
+          if [ "${{ github.event_name }}" == "push" ]; then
+            event_type="PUSH"
+            branch="${{ github.ref }}"
+            branch="${branch#refs/heads/}"
+          elif [ "${{ github.event_name }}" == "pull_request" ]; then
+            event_type="PULL REQUEST"
+            branch="${{ github.event.pull_request.head.ref }}"
+          fi
+          
+          commit_id=${{ github.sha }}
+          run_id=${{ github.run_id }}
+          run_url="https://github.com/LeucineTech/streem-backend/actions/runs/$run_id"
+          pr_number="${{ github.event.pull_request.number }}"
+          pr_info=$(curl -sSL -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" "https://api.github.com/repos/${{ github.repository }}/pulls/$pr_number")
+          
+          temp_reviewer=$(echo "$pr_info" | jq -r '.requested_reviewers[0].login')
+          reviewer=$(echo "$temp_reviewer" | tr '-' '_')
+          slack_reviewer="SLACK_ID_${reviewer^^}"
+          reviewer_slack_id=$(jq -r --arg key "$slack_reviewer" '.[$key]' "vars_context.json")
+          
+          temp_committer=${{ github.actor }}
+          committer=$(echo "$temp_committer" | tr '-' '_')          
+          committer_name=$(git log -1 --pretty=format:'%an')
+          slack_committer="SLACK_ID_${committer^^}"
+          committer_slack_id=$(jq -r --arg key "$slack_committer" '.[$key]' "vars_context.json")
+          
+          echo "::set-output name=EVENT_TYPE::$event_type"
+          echo "::set-output name=BRANCH::$branch"
+          echo "::set-output name=COMMIT_ID::$commit_id"
+          echo "::set-output name=COMMITTER_NAME::$committer_name"
+          echo "::set-output name=REVIEWER_SLACK_ID::$reviewer_slack_id"
+          echo "::set-output name=COMMITTER_SLACK_ID::$committer_slack_id"
+          echo "::set-output name=RUN_URL::$run_url"
+          
+          echo "############################################"
+          echo "$event_type | $branch | $commit_id | Committer: $temp_committer, $committer_name, $committer_slack_id | Reviewer: $temp_reviewer, $reviewer_slack_id"
+
+      - name: Create DB for JAAS and give permissions
+        env:
+          PGPASSWORD: postgres
+        run: |
+          psql -U postgres -h localhost -c "CREATE DATABASE jaas;"
+          sleep 10
+          psql -U postgres -h localhost -d jaas -c "ALTER USER postgres SUPERUSER;"
+          psql -U postgres -h localhost -d jaas -c "ALTER USER postgres CREATEDB;"
+          psql -U postgres -h localhost -d jaas -c "GRANT ALL PRIVILEGES ON DATABASE jaas TO postgres;"
+          psql -U postgres -h localhost -d jaas -c "ALTER USER postgres REPLICATION;"
+          psql -U postgres -h localhost -d jaas -c "ALTER USER postgres BYPASSRLS;"
+
+      # Set Up JDK: Uses actions/setup-java@v2 action to install the specified Java version (17). Temurin distribution chosen for performance and minimal dependencies.
+      - name: Set up JDK
+        uses: actions/setup-java@v2
+        with:
+          java-version: 17
+          distribution: 'temurin'
+
+      - name: clone Jaas Repo
+        run: |
+            git clone -b platform-develop https://${{ secrets.GIT_USERNAME }}:${{ secrets.GIT_PAT }}@github.com/LeucineTech/java-common-services.git java-common-services/  
+            sudo chmod -R 777 java-common-services
+            
+      - name: Build JAAS
+        run: |
+            cd java-common-services/jaas/
+            gradle bootJar
+            VERSION=$(grep "^version" build.gradle | awk '{print $2}' | tr -d "'")
+            mkdir -p /tmp/log/leucine/jaas/
+            nohup java -jar $(pwd)/build/libs/jaas-$VERSION.jar --spring.config.location=file:$(pwd)/src/main/resources/ > console.log 2>&1 &
+            sleep 30
+            curl http://localhost:9090/version.json
+            
+      - name: Show Console Logs
+        run: |
+          cd java-common-services/jaas/
+          cat console.log
+      - name: Show JAAS Logs
+        run: |
+          # Specify the path to the logs folder
+          LOGS_FOLDER="/tmp/log/leucine/jaas/"
+          
+          # List all log files in the 'logs' folder
+          LOG_FILES=$(find "$LOGS_FOLDER" -type f)
+          
+          # Loop through and display the content of each log file
+          for LOG_FILE in $LOG_FILES
+          do
+            echo "Contents of $LOG_FILE:"
+            cat "$LOG_FILE"
+            echo "=============================================="
+          done
+
+      # Run MongoDB with RS (Single Node): Uses the supercharge/mongodb-github-action@1.5.0 action. Configures a single-node replica set named rs with default port 27017. Specifies credentials and database configuration.
+      - name: RUN MongoDB with RS
+        env:
+          MONGO_INITDB_ROOT_USERNAME: root
+          MONGO_INITDB_ROOT_PASSWORD: root
+          MONGODB_AUTHENTICATION_DATABASE: admin
+          MONGODB_DATABASE: ontology
+          MONGODB_REPLICA_SET: rs0
+          MONGODB_URI: mongodb://root:root@localhost:27017/ontology?authSource=admin&replicaSet=rs0
+        run: |
+          sudo chmod -R 777 ./config/mongo
+          sudo sh ./config/mongo/mongo-single-node-rs.sh
+          sleep 5
+
+      # Extract Version: Extracts the project version from the build.gradle file. Stores the version in a GitHub environment variable (PROJECT_VERSION).
+      - name: Extract version from build.gradle
+        run: |
+          cd backend
+          VERSION=$(grep "^version" build.gradle | awk '{print $2}' | tr -d "'")
+          echo "Version is $VERSION"
+          echo "PROJECT_VERSION=$VERSION" >> $GITHUB_ENV
+          cd ..
+
+      # Build Backend Services: Uses gradlew bootJar command to build the backend services with the extracted version. This step includes compiling, packaging, and creating a JAR executable.
+      - name: Build backend services
+        run: ./gradlew bootJar
+
+      # Run Backend: Uses nohup to run the backend JAR file in the background. Specifies the Spring configuration location for application properties. Appends logs to the console.log file.
+      - name: Run Backend
+        run: |
+          nohup java -javaagent:$(pwd)/backend/jacocoagent-0.8.10.jar=destfile=jacoco.exec,append=true -jar $(pwd)/backend/build/libs/backend-$PROJECT_VERSION.jar --spring.config.location=file:$(pwd)/backend/src/main/resources/ > console.log 2>&1 &
+
+      # Wait for Backend: Sleeps for 40 seconds to allow the backend to start and become ready. Adjust the sleep duration based on your system and application startup time.
+      - name: Wait for Backend to be ready
+        run: |
+          sleep 40
+
+      # Show Console Logs: Prints the console.log file containing the backend startup and runtime logs.
+      - name: Show Console Logs
+        run: |
+          cat console.log
+
+      # Show Backend Logs: Uses find command to locate all log files in the specified folder. Prints the content of each log file for troubleshooting purposes.
+      - name: Show Backend Logs
+        run: |
+          # Specify the path to the logs folder
+          LOGS_FOLDER="/tmp/log/leucine/dwi/"
+          
+          # List all log files in the 'logs' folder
+          LOG_FILES=$(find "$LOGS_FOLDER" -type f)
+          
+          # Loop through and display the content of each log file
+          for LOG_FILE in $LOG_FILES
+          do
+            echo "Contents of $LOG_FILE:"
+            cat "$LOG_FILE"
+            echo "=============================================="
+          done
+
+      # Clone API Repo: Clones the platform-api repository in a subfolder platform-api. This allows running integration tests against the backend.
+      - name: Clone API Repo
+        run: |
+          git clone -b develop https://${{ secrets.GIT_USERNAME }}:${{ secrets.GIT_PAT }}@github.com/LeucineTech/platform-api.git platform-api/
+          sudo chmod -R 777 platform-api 
+
+      # Set Up Python: Uses actions/setup-python@v1 action to install Python 3.12.7 This is required for running API tests and generating reports.
+      - name: Set up Python 3.12.7
+        uses: actions/setup-python@v1
+        with:
+          python-version: 3.12.7
+
+      # Install Dependencies: Installs Python dependencies specified in the requirements.txt file. These dependencies might include testing libraries and reporting tools.
+      - name: Install Dependencies
+        run: |
+          cd platform-api
+          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+
+      # Configure AWS Credentials: Uses aws-actions/configure-aws-credentials@v1 action to set up AWS credentials. These credentials are needed for uploading reports to S3.
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }} # Replace with your AWS region
+
+      # Install allure: Installs allure and its related dependencies for generating test reports. Includes allure-docx to generate reports in Word format.
+      - name: Installing allure
+        run: |
+          cd platform-api
+          pip install git+https://github.com/typhoon-hil/allure-docx.git
+          python -m pip install --upgrade pip
+          npm install -g allure-commandline
+
+      # Run Test Cases: Uses pytest to run integration tests against the backend API. Uses several environment variables for configuration and test execution. Stores test results in the allure-report directory.
+      - name: Run Test-Cases
+        if: always()
+        continue-on-error: true
+        id: run_tests
+        env:
+          QA_URL: http://localhost:8080/v1
+          QA_ACCOUNT_OWNER_USERNAME: ${{ secrets.QA_ACCOUNT_OWNER_USERNAME }}
+          QA_ACCOUNT_OWNER_PASSWORD: ${{ secrets.QA_ACCOUNT_OWNER_PASSWORD }}
+          QA_ADMIN_USERNAME_01: ${{ secrets.QA_ADMIN_USERNAME_01 }}
+          QA_ADMIN_PASSWORD_01: ${{ secrets.QA_ADMIN_PASSWORD_01 }}
+          QA_PUBLISHER_USERNAME_01: ${{ secrets.QA_PUBLISHER_USERNAME_01 }}
+          QA_PUBLISHER_PASSWORD_01: ${{ secrets.QA_PUBLISHER_PASSWORD_01 }}
+          QA_GLOBAL_ADMIN_USERNAME_01: ${{ secrets.QA_GLOBAL_ADMIN_USERNAME_01 }}
+          QA_GLOBAL_ADMIN_PASSWORD_01: ${{ secrets.QA_GLOBAL_ADMIN_PASSWORD_01 }}
+          QA_GLOBAL_ADMIN_USERNAME_02: ${{ secrets.QA_GLOBAL_ADMIN_USERNAME_02 }}
+          QA_GLOBAL_ADMIN_PASSWORD_02: ${{ secrets.QA_GLOBAL_ADMIN_PASSWORD_02 }}
+          QA_OPERATOR_USERNAME_01: ${{ secrets.QA_OPERATOR_USERNAME_01 }}
+          QA_OPERATOR_PASSWORD_01: ${{ secrets.QA_OPERATOR_PASSWORD_01 }}
+          QA_SUPERVISOR_USERNAME_01: ${{ secrets.QA_SUPERVISOR_USERNAME_01 }}
+          QA_SUPERVISOR_PASSWORD_01: ${{ secrets.QA_SUPERVISOR_PASSWORD_01 }}
+          QA_SYSTEM_ADMIN_USERNAME_01: ${{ secrets.QA_SYSTEM_ADMIN_USERNAME_01 }}
+          QA_SYSTEM_ADMIN_PASSWORD_01: ${{ secrets.QA_SYSTEM_ADMIN_PASSWORD_01 }}
+
+        run: |
+          cd platform-api
+          pytest -W ignore -v -s --alluredir=allure-report --host http://localhost:8080/v1
+          sudo chmod -R 777 allure-report
+
+      # Generate Reports: Uses allure generate command to create a report based on the test results. Outputs the report in HTML format to the allure-result directory.
+      - name: Generate reports
+        run: |
+          cd platform-api
+          allure generate allure-report --clean -o allure-result
+          ls -lrt allure-result
+
+      # Coverage Report (Jacoco): Kills the backend process running on port 8080. Waits for a short period to ensure proper shutdown. Uses jacococli-0.8.10.jar to generate a code coverage report based on the jacoco.exec file. Outputs the report in HTML format to the jacoco-reports directory.
+      - name: Coverage Report (Jacoco)
+        run: |
+          kill $(lsof -t -i:8080) || true
+          sleep 15
+          java -jar $(pwd)/backend/jacococli-0.8.10.jar report $(pwd)/jacoco.exec --classfiles $(pwd)/backend/build/classes --html $(pwd)/jacoco-reports --name "My Code Coverage Report"   
+
+      # Extracts, checks and Fails if the code coverage percentage is less than the threshold set(40%).
+      - name: Extract coverage percentage
+        id: extract_coverage
+        run: |
+          coverage=$(grep -oP '<td class="ctr2">.*?</td>' jacoco-reports/index.html | awk -F'>' 'NR==1{print $2; exit}' | awk -F'<' '{print $1}')
+          echo "Coverage percentage: $coverage"
+          echo "::set-output name=COVERAGE::$coverage" 
+
+      # Upload Reports to S3: Uses aws s3 cp command to upload the generated reports to an S3 bucket. Uses environment variables for S3 configurations, AWS credentials, and commit ID. Uploads both API test and code coverage reports to separate folders.
+      - name: Upload Reports to S3
+        env:
+          COMMIT_ID: "${{ steps.git_pr_info.outputs.COMMIT_ID }}"
+          S3_BUCKET: "leucine-qa-reports"
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_REGION: ${{ secrets.AWS_REGION }} # Replace with your AWS region
+        run: |
+          cd platform-api
+          aws s3 cp allure-result/ s3://${S3_BUCKET}/dwi/backend/api-test/${COMMIT_ID} --recursive
+          cd ../
+          aws s3 cp jacoco-reports/ s3://${S3_BUCKET}/dwi/backend/code-coverage/${COMMIT_ID} --recursive
+
+      # Generate S3-URL: Creates URLs for accessing the uploaded reports on S3. Stores the URLs in GitHub environment variables (automation_url and code_coverage_url).
+      - name: Generate S3 Presigned URL
+        id: s3-url
+        env:
+          COMMIT_ID: "${{ steps.git_pr_info.outputs.COMMIT_ID }}"
+          S3_BUCKET: "leucine-qa-reports"
+        run: |
+          automation_url=http://${S3_BUCKET}.s3.ap-south-1.amazonaws.com/dwi/backend/api-test/${COMMIT_ID}/index.html
+          echo "::set-output name=automation_url::$automation_url"
+          code_coverage_url=http://${S3_BUCKET}.s3.ap-south-1.amazonaws.com/dwi/backend/code-coverage/${COMMIT_ID}/index.html
+          echo "::set-output name=code_coverage_url::$code_coverage_url"
+
+      # Check the current code coverage with the coverage benchmark
+      - name: Check coverage threshold
+        id: check_coverage
+        if: steps.extract_coverage.outputs.COVERAGE < env.COVERAGE_BENCHMARK
+        run: |
+          echo "Code coverage is below the threshold of ${{ env.COVERAGE_BENCHMARK }}%. PR rejected!"
+          echo "IS_COVERAGE_FAILED=true" >> $GITHUB_ENV
+          exit 1
+        continue-on-error: true
+
+      - name: Fail if coverage is below threshold
+        id: fail_if_coverage_below_threshold
+        if: always()
+        uses: actions/github-script@v6
+        with:
+          github-token: ${{ secrets.GIT_PAT }}
+          script: |
+            if (process.exitCode === 1) {
+              github.issues.createComment({
+                issue_number: context.issue.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body: "PR rejected due to low code coverage. Please address the coverage issues and submit a new pull request."
+              })
+            }    
+
+      # Send message to Slack: Sends message to Slack channel with all required information such as Service, Event_type, Commit ID, Git User and URLs.
+      - name: Send notification to Slack
+        env:
+          commit_id: $(git rev-parse HEAD)
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        run: |
+          version="${{ steps.version.outputs.version }}"
+          event_type="${{ steps.git_pr_info.outputs.EVENT_TYPE }}"
+          branch="${{ steps.git_pr_info.outputs.BRANCH }}"
+          commit_id="${{ steps.git_pr_info.outputs.COMMIT_ID }}"
+          committer_name="${{ steps.git_pr_info.outputs.COMMITTER_NAME }}"
+          test_automation_report_url="${{ steps.s3-url.outputs.automation_url }}"
+          code_coverage_url="${{ steps.s3-url.outputs.code_coverage_url }}"
+          coverage_benchmark="${{ env.COVERAGE_BENCHMARK }}"
+          current_coverage="${{ steps.extract_coverage.outputs.COVERAGE }}"
+          committer_slack_id="${{ steps.git_pr_info.outputs.COMMITTER_SLACK_ID }}"
+          reviewer_slack_id="${{ steps.git_pr_info.outputs.REVIEWER_SLACK_ID }}"
+          run_url="${{ steps.git_pr_info.outputs.RUN_URL }}"
+          
+          if [ "${{ env.IS_COVERAGE_FAILED }}" == true ]; then
+            SLACK_MESSAGE="Service: DWI \n Version: $version \n Event Type: $event_type \n Branch: $branch \n Commit ID: $commit_id \n Committer: $committer_name \n API Automation Report: $test_automation_report_url \n Code Coverage Report: $code_coverage_url \n Coverage Benchmark: $coverage_benchmark% \n Current Coverage: $current_coverage \n GitHub Action Logs: $run_url \n :x: Code Checks Failed! \n Attention <@$committer_slack_id>: Please review the failure details and address the issues. Further details can be found in the API Automation report & Code Coverage report."
+          else
+            SLACK_MESSAGE="Service: DWI \n Version: $version \n Event Type: $event_type \n Branch: $branch \n Commit ID: $commit_id \n Committer: $committer_name \n API Automation Report: $test_automation_report_url \n Code Coverage Report: $code_coverage_url \n Coverage Benchmark: $coverage_benchmark% \n Current Coverage: $current_coverage \n GitHub Action Logs: $run_url \n :white_check_mark: Workflow completed successfully! \n <@$reviewer_slack_id>: You can start reviewing the PR"
+          fi
+
+          curl -X POST -H 'Content-type: application/json' --data "{\"text\":\"$SLACK_MESSAGE\"}" $SLACK_WEBHOOK_URL

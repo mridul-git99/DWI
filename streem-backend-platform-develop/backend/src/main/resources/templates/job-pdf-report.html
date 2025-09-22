@@ -1,0 +1,331 @@
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <title>Job Report</title>
+
+  <style>
+    /* ──────────────────────────────────────────────────────────
+       CUSTOM SECTION WRAPPER FOR PAGE BREAK CONTROL
+    ────────────────────────────────────────────────────────── */
+    .section-wrapper {
+      break-inside: avoid;
+      page-break-inside: avoid;
+    }
+    /* ──────────────────────────────────────────────────────────
+       0) PAGE / RESET
+    ────────────────────────────────────────────────────────── */
+    @page {
+      size: A4 portrait;
+      margin-top: 60px;
+      margin-bottom: 38px;
+      margin-left: 0;
+      margin-right: 0;
+      @top-center {
+        content: element(pageHeader);
+      }
+      @bottom-center {
+        content: element(pageFooter);
+      }
+    }
+
+    html, body {
+      margin: 0;
+      padding: 0;
+      font-family: Helvetica, 'Noto Emoji', sans-serif;
+      font-size: 11pt;
+      font-size: 11pt;
+      color: #000;
+    }
+
+    p, h3, h4 {
+      margin: 0;
+    }
+
+    /* ──────────────────────────────────────────────────────────
+       1) HEADER & FOOTER
+    ────────────────────────────────────────────────────────── */
+    .header {
+      position: running(pageHeader);
+      background: #eeeeee;
+      padding: 10px 20px;
+    }
+
+    .header img {
+      height: 8mm;
+    }
+
+    .footer {
+      position: running(pageFooter);
+      background: #eeeeee;
+      font-size: 9pt;
+      padding: 8px 20px;
+    }
+
+    .footer-table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    .footer-table td {
+      vertical-align: middle;
+    }
+
+    .page-counter::after {
+      content: counter(page) " / " counter(pages);
+      display: inline-block;
+      background: #bababa;
+      border-radius: 4px;
+      padding: 2px 8px;
+      font-weight: bold;
+      white-space: nowrap;
+    }
+
+    /* ──────────────────────────────────────────────────────────
+       2) CONTENT WRAPPER
+    ────────────────────────────────────────────────────────── */
+    .content {
+      margin: 0.5cm;
+    }
+
+    /* ──────────────────────────────────────────────────────────
+       3) JOB OVERVIEW (3 boxes with 1 mm gutter)
+    ────────────────────────────────────────────────────────── */
+    .job-overview-table {
+      width: 100%;
+      border-collapse: separate;
+      border-spacing: 1mm 0; /* 1 mm horizontal gap */
+      margin-bottom: 4mm;
+      table-layout: fixed;
+    }
+
+    .job-overview-table td {
+      border: 1pt solid #000;
+      border-radius: 8px 8px 0 0;
+      vertical-align: top;
+    }
+
+    .job-heading {
+      background: #000;
+      border-radius: 8px 8px 0 0;
+      color: #fff;
+      padding: 2mm 2.5mm;
+    }
+
+    .job-value {
+      padding: 1.2mm 2mm;
+    }
+
+    /* ──────────────────────────────────────────────────────────
+       4) DETAIL PANEL (grey slab under each section)
+    ────────────────────────────────────────────────────────── */
+    .detail-panel {
+      background: #f2f2f2;
+      padding: 4mm;
+      margin-bottom: 6mm;
+      break-inside: avoid;
+      page-break-inside: avoid;
+    }
+
+
+    /* ──────────────────────────────────────────────────────────
+       5) SECTION “PILL” TITLE
+    ────────────────────────────────────────────────────────── */
+    .section-title {
+      display: inline-block;
+      background: #000;
+      color: #fff;
+      padding: 1.2mm 4mm;
+      margin: 0 0 0.5mm 0; /* sit pill just above slab */
+      border-radius: 8px 8px 0 0; /* only top corners rounded */
+      border-bottom: 0.5pt solid #000;
+    }
+
+    /* ──────────────────────────────────────────────────────────
+       6) DETAIL ROWS (label + white value box)
+    ────────────────────────────────────────────────────────── */
+
+    .detail-panel table.detail-table {
+      width: 100%;
+      border-collapse: separate;
+      border-spacing: 0 2mm;
+      margin-bottom: 12px;
+    }
+
+    .detail-panel table.detail-table th,
+    .detail-panel table.detail-table td {
+      vertical-align: top;
+      /*padding: 1.5mm 2mm;*/
+    }
+
+    .detail-panel table.detail-table th {
+      width: 35%;
+      font-weight: 600;
+      border: none;
+      color: #000;
+      text-align: left;
+    }
+
+    .detail-panel table.detail-table td {
+      box-sizing: border-box;
+      border: 1pt solid #000;
+      background: none;
+    }
+
+    /* ──────────────────────────────────────────────────────────
+       7) PARAMETER TABLE
+    ────────────────────────────────────────────────────────── */
+    .parameter-table {
+      width: 100%;
+      table-layout: fixed;
+      border-collapse: collapse;
+      margin: 4mm 0;
+    }
+
+    .parameter-table th,
+    .parameter-table td {
+      border: 0.5pt solid #000;
+      padding: 1.6mm 2mm;
+      vertical-align: bottom;
+      white-space: normal;
+      word-wrap: break-word;
+      height: 8mm;
+    }
+
+    .parameter-table th {
+      background: #fafafa;
+      font-weight: 600;
+    }
+
+    /* ──────────────────────────────────────────────────────────
+       8) PAGE BREAK
+    ────────────────────────────────────────────────────────── */
+    .page-break {
+      page-break-before: always;
+    }
+
+    /*  ---------------------------------------------------------
+        9 )Stage Task details
+    ---------------------------------------------------------- */
+
+    .stage-header {
+      margin: 6mm 0 2mm; /* space before & after header */
+    }
+
+    .stage-header .stage-number {
+      font-size: 12pt;
+      font-weight: 700;
+      margin: 0;
+    }
+
+    .stage-header .stage-name {
+      font-size: 11pt;
+      font-weight: 600;
+      margin: 2px 0; /* small gap under name */
+    }
+
+    .stage-header .stage-separator {
+      width: 100%;
+      border-top: 0.5pt solid #000;
+      margin: 2mm 0 4mm;
+    }
+
+    .task-count {
+      position: absolute;
+      top: 0;
+      right: 0;
+      font-size: 10pt;
+      font-weight: 600;
+      padding: 2mm 2.5mm;
+    }
+    
+    /* Styles for early start and delayed completion notes */
+    .early-start-note, .delayed-completion-note {
+      margin: 2mm 0;
+      padding: 1mm 2mm;
+      font-size: 10pt;
+      font-style: italic;
+    }
+    
+    /* Task pause resume table styles */
+    .task-pause-resume-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 3mm 0;
+      page-break-inside: auto;
+    }
+    
+    .task-pause-resume-table th,
+    .task-pause-resume-table td {
+      border: 0.5pt solid #000;
+      padding: 1.6mm 2mm;
+      vertical-align: top;
+      text-align: left;
+    }
+    
+    .task-pause-resume-table th {
+      background: #f2f2f2;
+      font-weight: 600;
+    }
+    
+    .task-pause-details {
+      margin-top: 2mm;
+      margin-bottom: 4mm;
+    }
+    
+    .task-number-column {
+      width: 10%;
+      font-weight: 600;
+    }
+    
+    /* Task number styling in instructions */
+    .task-number {
+      font-size: 0.9em;
+      color: #666;
+      margin-right: 5px;
+    }
+    
+    /* Simple spacing for checkbox options */
+    .checkbox-option {
+      margin-bottom: 3px;
+    }
+    
+
+  </style>
+</head>
+
+<body>
+
+<!-- Header -->
+<div class="header">
+  <table style="width:100%;">
+    <tr>
+      <td style="text-align:left;">
+        <img src="{{CLIENT_LOGO}}" alt="Client Logo">
+      </td>
+      <td style="text-align:right;">
+        <img src="{{LEUCINE_LOGO}}" alt="Leucine Logo">
+      </td>
+    </tr>
+  </table>
+</div>
+
+<!-- Footer (text left, page number right inside a box) -->
+<div class="footer">
+  <table class="footer-table">
+    <tr>
+      <td style="text-align:left;">
+        Downloaded on {{GENERATED_AT}} By {{USER}} for facility: {{FACILITY}} using {{APP_LABEL}} - Leucine App
+      </td>
+      <td style="text-align:right;">
+        <span class="page-counter"></span>
+      </td>
+    </tr>
+  </table>
+</div>
+
+<div class="content">
+  {{content}}
+</div>
+
+</body>
+</html>

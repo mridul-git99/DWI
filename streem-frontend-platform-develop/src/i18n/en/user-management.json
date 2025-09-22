@@ -1,0 +1,12 @@
+{
+  "login": {
+    "heading": "Welcome to Leucine!"
+  },
+  "add-title": "Add New User",
+  "edit-title": "User Profile",
+  "profile-title": "My Profile",
+  "firstName": {
+    "placeholder": "",
+    "label": ""
+  }
+}
